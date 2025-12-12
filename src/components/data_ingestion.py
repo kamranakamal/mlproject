@@ -1,6 +1,8 @@
 import os 
 import sys
 from pathlib import Path
+from src.components.model_trainer import ModelTrainer_config
+from src.components.model_trainer import ModelTrainer
 
 # make sure the repo root is on sys.path so the src package can be imported when running modules directly
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -47,4 +49,6 @@ if __name__=="__main__":
     obj.initiate_data_ingestion()
     train_data,test_data = obj.initiate_data_ingestion()
     data_transformer = DataTransforamtion()
-    data_transformer.initiate_data_transformation(train_data,test_data)
+    train_arr,test_arr,_ = data_transformer.initiate_data_transformation(train_data,test_data)
+    model_trainer = ModelTrainer()
+    print(model_trainer.initiate_model_trainer(train_arr,test_arr))
