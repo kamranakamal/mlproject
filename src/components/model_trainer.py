@@ -3,13 +3,16 @@ import sys
 from src.logger import logging
 from src.exception import CustomException
 from sklearn.metrics import r2_score,mean_absolute_error
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression,Ridge,Lasso,ElasticNet
 from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor,GradientBoostingRegressor,AdaBoostRegressor
 from src.utils import save_object,evaluate_model
 from dataclasses import dataclass
+import xgboost as xgb
+from catboost import CatBoostRegressor
+from src.utils import hyperparameter_tuning
 
 
 @dataclass
@@ -31,16 +34,74 @@ class ModelTrainer:
             logging.info("Train test split successfully done.")
             models = {
                 "Linear Regression":LinearRegression(),
-                "K-Neighbours":KNeighborsRegressor(),
-                "Random Forest Regressor":RandomForestRegressor(),
-                "Ada-Boost":AdaBoostRegressor(),
-                "Gradient Boost":GradientBoostingRegressor()
+                "random_forest":RandomForestRegressor(),
+                "xgboost":xgb.XGBRegressor(),
+                "ridge":Ridge(),
+                "lasso":Lasso(),
+                "elasticnet":ElasticNet()
+                
             }
+            param_grid = {
+    "Linear Regression": {
+        "fit_intercept": [True, False],
+        "copy_X": [True, False]
+    },
+    
+    "ridge": {
+        "alpha": [0.01, 0.1, 1.0, 10.0, 100.0],   # regularization strength
+        "fit_intercept": [True, False],
+        "solver": ["auto", "svd", "cholesky", "lsqr", "sparse_cg", "sag", "saga"]
+    },
+    
+    "lasso": {
+        "alpha": [0.0001, 0.001, 0.01, 0.1, 1.0], # regularization strength
+        "fit_intercept": [True, False],
+        "max_iter": [1000, 5000, 10000],
+        "selection": ["cyclic", "random"]
+    },
+    
+    "elasticnet": {
+        "alpha": [0.0001, 0.001, 0.01, 0.1, 1.0], # overall regularization strength
+        "l1_ratio": [0.1, 0.3, 0.5, 0.7, 0.9],    # balance between L1 (lasso) and L2 (ridge)
+        "fit_intercept": [True, False],
+        "max_iter": [1000, 5000, 10000],
+        "selection": ["cyclic", "random"]
+    },
+    
+    "random_forest": {
+        "n_estimators": [100, 200, 500],
+        "max_depth": [None, 5, 10, 20],
+        "min_samples_split": [2, 5, 10],
+        "min_samples_leaf": [1, 2, 4],
+        "max_features": ["auto", "sqrt", "log2"],
+        "bootstrap": [True, False]
+    },
+    
+    "xgboost": {
+        "n_estimators": [100, 200, 500],
+        "learning_rate": [0.01, 0.05, 0.1, 0.2],
+        "max_depth": [3, 5, 7, 10],
+        "subsample": [0.6, 0.8, 1.0],
+        "colsample_bytree": [0.6, 0.8, 1.0],
+        "gamma": [0, 0.1, 0.2],
+        "reg_alpha": [0, 0.01, 0.1],
+        "reg_lambda": [0.5, 1.0, 2.0]
+    }
+}
             model_report:dict = evaluate_model(X_train,y_train,X_test,y_test,models)
             best_model_score = max(sorted(model_report.values()))
             best_model_name = list(model_report.keys())[list(model_report.values()).index(best_model_score)]
-
             best_model = models[best_model_name]
+            top_model_score = list(sorted(model_report.values()))[-3:]
+            top_models = {}
+            for i in top_model_score:
+                model_name = list(model_report.keys())[list(model_report.values()).index(i)]
+                top_models[model_name]=models[model_name]
+            best_params,best_model_score_tuned = hyperparameter_tuning(top_models,param_grid,X_train,y_train)
+            models[best_model_name].set_params(**best_params)
+            logging.info(f"Best model found {best_model_name} with score {best_model_score_tuned} after hyperparameter tuning")
+
+    
                 
         except Exception as e:
             raise CustomException(e,sys)
