@@ -1,4 +1,4 @@
-# Student Performance ML App
+# Students Score Prediction
 
 FastAPI inference API and Streamlit UI for predicting student math scores. Includes training pipeline (ingestion → transformation → model selection/tuning), Dockerized API/UI, and a simple orchestrator script.
 

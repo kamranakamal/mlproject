@@ -1,6 +1,6 @@
-version: "3.9"
 services:
   api:
+    image: 7903954268/mlproject-api:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -8,6 +8,7 @@ services:
       - "8000:8000"
 
   ui:
+    image: 7903954268/mlproject-ui:latest
     build:
       context: .
       dockerfile: Dockerfile.ui
