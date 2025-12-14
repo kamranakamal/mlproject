@@ -41,16 +41,20 @@ def evaluate_model(X_train,y_train,X_test,y_test,models):
 def hyperparameter_tuning(models, param_grid, X_train, y_train):
     try:
         logging.info("Starting hyperparameter tuning")
-        for i in range(len(list(models))):
-            model = list(models.values())[i]
-            param = param_grid[list(models.keys())[i]]
+        best_name = None
+        best_params = None
+        best_score = -float("inf")
+        for name, model in models.items():
+            param = param_grid.get(name, {})
             grid_search = GridSearchCV(estimator=model, param_grid=param, scoring='r2', cv=3, n_jobs=-1)
             grid_search.fit(X_train, y_train)
-            best_params = grid_search.best_params_
-            best_model_score_tuned = grid_search.best_score_
-            logging.info(f"Best parameters for {list(models.keys())[i]}: {best_params} with score {best_model_score_tuned}")
-            logging.info("Hyperparameter tuning completed")
-            return best_params,best_model_score_tuned
+            if grid_search.best_score_ > best_score:
+                best_score = grid_search.best_score_
+                best_params = grid_search.best_params_
+                best_name = name
+            logging.info(f"Best parameters for {name}: {grid_search.best_params_} with score {grid_search.best_score_}")
+        logging.info("Hyperparameter tuning completed")
+        return best_name, best_params, best_score
     except Exception as e:
         logging.error("Error during hyperparameter tuning", exc_info=True)
         raise CustomException(e, sys)

@@ -9,7 +9,7 @@ from src.exception import CustomException
 from src.logger import logging
 
 
-app = FastAPI()
+application = FastAPI()
 
 PREPROCESSOR_PATH = os.path.join("artifacts", "preprocessor.pkl")
 MODEL_PATH = os.path.join("artifacts", "model.pkl")

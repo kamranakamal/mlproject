@@ -39,7 +39,6 @@ class ModelTrainer:
                 "ridge":Ridge(),
                 "lasso":Lasso(),
                 "elasticnet":ElasticNet()
-                
             }
             param_grid = {
     "Linear Regression": {
@@ -89,27 +88,35 @@ class ModelTrainer:
     }
 }
             model_report:dict = evaluate_model(X_train,y_train,X_test,y_test,models)
-            best_model_score = max(sorted(model_report.values()))
-            best_model_name = list(model_report.keys())[list(model_report.values()).index(best_model_score)]
-            best_model = models[best_model_name]
             top_model_score = list(sorted(model_report.values()))[-3:]
             top_models = {}
-            for i in top_model_score:
-                model_name = list(model_report.keys())[list(model_report.values()).index(i)]
+            for score in top_model_score:
+                model_name = list(model_report.keys())[list(model_report.values()).index(score)]
                 top_models[model_name]=models[model_name]
-            best_params,best_model_score_tuned = hyperparameter_tuning(top_models,param_grid,X_train,y_train)
-            models[best_model_name].set_params(**best_params)
-            logging.info(f"Best model found {best_model_name} with score {best_model_score_tuned} after hyperparameter tuning")
 
-    
-                
+            best_name, best_params, best_score_cv = hyperparameter_tuning(top_models,param_grid,X_train,y_train)
+
+            if best_name is None:
+                raise CustomException("No best model found during hyperparameter tuning")
+
+            best_model = models[best_name]
+            if best_params:
+                best_model.set_params(**best_params)
+            # fit the tuned model
+            best_model.fit(X_train, y_train)
+            # evaluate on held-out test
+            y_test_pred = best_model.predict(X_test)
+            best_model_score = r2_score(y_test, y_test_pred)
+
+            logging.info(f"Best model after tuning: {best_name} | CV score {best_score_cv} | Test r2 {best_model_score}")
+
+            if best_model_score < 0.7:
+                raise CustomException("No best model found")
+
+            save_object(self.model_trainer_config.trained_model_file_path,best_model)
+            logging.info("Best Model saved")
+            return best_model_score,best_model
+
         except Exception as e:
             raise CustomException(e,sys)
-        finally:
-            if best_model_score<0.7:
-                raise CustomException("No best model found")
-            save_object(self.model_trainer_config.trained_model_file_path,best_model)
-            logging.info("Best Model found on both test and training dataset")
-            logging.info(f"model score is {model_report[best_model_name]}")
-            return best_model_score,best_model
             
